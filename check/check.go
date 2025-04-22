@@ -3,6 +3,7 @@ package check
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -101,8 +102,23 @@ func Check() ([]Result, error) {
 	proxies = proxyutils.DeduplicateProxies(proxies)
 	slog.Info(fmt.Sprintf("去重后节点数量: %d", len(proxies)))
 
-	checker := NewProxyChecker(len(proxies))
-	return checker.run(proxies)
+	// 对proxies进行筛选和处理
+	var shuffled = ShuffleProxies(proxies)
+	return checker.run(shuffled)
+}
+
+func ShuffleProxies(proxies []map[string]any) []map[string]any {
+	// 创建原始切片的副本，避免修改原数据
+	shuffled := make([]map[string]any, len(proxies))
+	copy(shuffled, proxies)
+
+	// 使用当前时间作为随机种子创建新的rand实例，避免全局状态的影响
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+
+	return shuffled
 }
 
 // Run 运行检测流程
